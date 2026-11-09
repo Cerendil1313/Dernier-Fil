@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Dernier fil</title>
+<meta name="description" content="Jeu de bluff et de déminage à rôles cachés, de 3 à 10 joueurs, chacun sur son téléphone.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Figtree:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+:root{color-scheme:light}
+
+/* Layout: one narrow phone column, a bench of wires; HUD on top, players as rows of face-down cards */
+:root{
+  --bg:#e8ebee;--surface:#f6f7f9;--raise:#ffffff;--fg:#15191e;--muted:#58616c;--line:#cdd3da;
+  --accent:#e2a300;--accent-soft:#fbefc9;--accent-ink:#4a3500;
+  --blue:#2459c4;--blue-soft:#dde6f8;--red:#c22f2a;--red-soft:#f7dedc;
+  --wire-d:#16936a;--wire-n:#8b949e;--wire-b:#d4352b;
+  --back1:#2a3139;--back2:#343c46;--back-line:#4a535e;
+  --font-display:"Chakra Petch","Arial Narrow",system-ui,sans-serif;
+  --font-body:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1215;--surface:#171b20;--raise:#1e2329;--fg:#e6e9ed;--muted:#9aa3ad;--line:#2d343c;
+  --accent:#f0b41c;--accent-soft:#3a2f10;--accent-ink:#f7d77a;
+  --blue:#7aa4f2;--blue-soft:#1a2740;--red:#f06f66;--red-soft:#3a1c1b;
+  --wire-d:#2fc58b;--wire-n:#7c8691;--wire-b:#f2493e;
+  --back1:#242a31;--back2:#2d343c;--back-line:#424a54;color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1215;--surface:#171b20;--raise:#1e2329;--fg:#e6e9ed;--muted:#9aa3ad;--line:#2d343c;
+  --accent:#f0b41c;--accent-soft:#3a2f10;--accent-ink:#f7d77a;
+  --blue:#7aa4f2;--blue-soft:#1a2740;--red:#f06f66;--red-soft:#3a1c1b;
+  --wire-d:#2fc58b;--wire-n:#7c8691;--wire-b:#f2493e;
+  --back1:#242a31;--back2:#2d343c;--back-line:#424a54;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:16px;line-height:1.45}
+.wrap{max-width:560px;margin:0 auto;padding-block:14px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-family:var(--font-display);font-weight:700;font-size:22px;letter-spacing:.02em;display:flex;align-items:center;gap:10px}
+.mark{width:28px;height:28px;border-radius:7px;background:var(--back1);position:relative;flex:none}
+.mark::before,.mark::after{content:"";position:absolute;top:13px;height:3px;width:9px;background:var(--accent);border-radius:2px}
+.mark::before{left:4px;transform:rotate(-14deg)}.mark::after{right:4px;transform:rotate(14deg)}
+.net{font-family:var(--font-mono);font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:3px 10px;white-space:nowrap}
+.net.on{color:var(--wire-d);border-color:currentColor}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1,h2{font-family:var(--font-display);margin:0;text-wrap:balance;line-height:1.1}
+h1{font-size:30px;font-weight:700}h2{font-size:18px;font-weight:700}
+p{margin:0}.muted{color:var(--muted);font-size:14px}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--raise);border-radius:10px;padding:11px 16px;font-weight:600;min-height:46px}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#211800}
+.btn.ghost{background:transparent}
+.btn.small{min-height:34px;padding:6px 12px;font-size:14px}
+.btn:focus-visible,.card:focus-visible,.secret:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.row>.grow{flex:1;min-width:0}
+input[type=text]{font:inherit;font-size:17px;width:100%;min-height:48px;border-radius:10px;border:1px solid var(--line);background:var(--raise);color:var(--fg);padding:10px 14px}
+.err{color:var(--red);font-size:14px}
+.stepper{display:flex;align-items:center;gap:14px}
+.stepper button{width:48px;height:48px;border-radius:12px;border:1px solid var(--line);background:var(--raise);font-size:24px;font-weight:600;line-height:1}
+.stepper .num{font-family:var(--font-display);font-size:40px;font-weight:700;min-width:2ch;text-align:center;font-variant-numeric:tabular-nums}
+.seats{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;border-top:1px solid var(--line)}
+.seats li{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line);min-height:50px}
+.seat-n{font-family:var(--font-mono);font-size:13px;color:var(--muted);width:2.2ch;font-variant-numeric:tabular-nums}
+.seat-name{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere}
+.seat-free{color:var(--muted);font-weight:400}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}.dot.on{background:var(--wire-d)}
+.tag{font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:6px;padding:1px 6px;color:var(--muted)}
+.tag.host{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft)}
+.hud{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.hud-item{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.hud-item.wide{grid-column:1/-1}
+.lbl{font-family:var(--font-mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+.val{font-family:var(--font-display);font-size:26px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1}
+.pips{display:flex;gap:5px}.pips i{flex:1;height:8px;border-radius:3px;background:var(--line)}
+.pips i.past{background:var(--muted)}.pips i.now{background:var(--accent)}
+.meter{display:flex;gap:4px}.meter i{flex:1;height:12px;border-radius:3px;background:var(--line)}.meter i.ok{background:var(--wire-d)}
+.hud-line{display:flex;align-items:end;justify-content:space-between;gap:8px}
+.turn{border-radius:14px;padding:14px 16px;background:var(--surface);border:1px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.turn.mine{background:var(--accent-soft);border-color:var(--accent)}
+.turn strong{font-family:var(--font-display);font-size:20px;line-height:1.15}
+.turn.mine strong{color:var(--accent-ink)}
+.last{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--muted)}
+.me{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.secret{border:1px dashed var(--line);background:var(--raise);border-radius:12px;padding:12px;text-align:left;min-height:96px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+.secret b{font-family:var(--font-display);font-size:18px}
+.secret small{color:var(--muted);font-size:13px}
+.secret.open{border-style:solid}
+.team{font-family:var(--font-display);font-weight:700;font-size:22px}
+.team.b{color:var(--blue)}.team.r{color:var(--red)}
+.secret.open.b{background:var(--blue-soft);border-color:var(--blue)}
+.secret.open.r{background:var(--red-soft);border-color:var(--red)}
+.mini{display:flex;flex-wrap:wrap;gap:6px 10px;font-size:14px}
+.mini span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;background:var(--w);flex:none}
+.players{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.pl{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px}
+.pl.holder{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.pl-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.pl-top .nm{font-weight:700;font-size:17px;overflow-wrap:anywhere;min-width:0}
+.pl-top .cnt{margin-left:auto;font-family:var(--font-mono);font-size:12px;color:var(--muted)}
+.pince{font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;background:var(--accent);color:#211800;border-radius:6px;padding:2px 7px}
+.cards{display:flex;flex-wrap:wrap;gap:8px}
+.card{width:46px;height:64px;border-radius:8px;border:1px solid var(--back-line);background:repeating-linear-gradient(135deg,var(--back1) 0 7px,var(--back2) 7px 14px);padding:0;position:relative;transition:transform .12s ease}
+.card::after{content:"";position:absolute;left:9px;right:9px;top:30px;height:3px;border-radius:2px;background:var(--back-line)}
+.card[disabled]{cursor:default}
+.card.can{border-color:var(--accent)}
+.card.can::after{background:var(--accent)}
+.card.sel{transform:translateY(-6px);box-shadow:0 0 0 3px var(--accent)}
+.pl.me .card{opacity:.75}
+.wire{width:46px;height:34px;border-radius:7px;background:var(--raise);border:1px solid var(--line);position:relative;flex:none}
+.wire::before,.wire::after{content:"";position:absolute;top:15px;height:4px;width:16px;background:var(--w);border-radius:2px}
+.wire::before{left:4px;transform:rotate(-10deg)}.wire::after{right:4px;transform:rotate(10deg)}
+.d{--w:var(--wire-d)}.n{--w:var(--wire-n)}.b{--w:var(--wire-b)}
+.wire.b{background:var(--red-soft);border-color:var(--wire-b)}
+.cut-row{display:flex;flex-direction:column;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.cut-row:first-of-type{border-top:0;padding-top:0}
+.cut-list{display:flex;flex-wrap:wrap;gap:10px}
+.cut-item{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--muted);max-width:64px;text-align:center;overflow-wrap:anywhere}
+.log{list-style:none;margin:0;padding:0;font-size:14px;display:flex;flex-direction:column;gap:6px}
+.log li{display:flex;gap:8px;align-items:baseline}
+.log li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--muted);flex:none;transform:translateY(-2px)}
+.result{border-radius:16px;padding:20px 16px;display:flex;flex-direction:column;gap:8px;border:1px solid var(--line)}
+.result.b{background:var(--blue-soft);border-color:var(--blue)}.result.r{background:var(--red-soft);border-color:var(--red)}
+.result.b h1{color:var(--blue)}.result.r h1{color:var(--red)}
+.roles{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.roles li{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}
+.roles .team{font-size:16px}
+.notice{border-radius:12px;padding:12px 14px;background:var(--accent-soft);color:var(--accent-ink);font-size:14px}
+details.rules{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+details.rules summary{font-family:var(--font-display);font-weight:700;font-size:17px;cursor:pointer}
+details.rules ul{margin:10px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:15px}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);z-index:20}
+.flash{animation:flash .5s ease 2}
+@keyframes flash{50%{background:var(--red-soft)}}
+@media (prefers-reduced-motion:reduce){.flash{animation:none}.card{transition:none}}
+
+
+[hidden]{display:none!important}
+html,body{margin:0}
+img{max-width:100%}
+.wrap{padding-block:calc(14px + env(safe-area-inset-top,0px)) calc(48px + env(safe-area-inset-bottom,0px))}
+.share{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.qr{background:#ffffff;padding:10px;border-radius:12px;line-height:0;flex:none}
+.qr img,.qr canvas{display:block;max-width:100%}
+.share-txt{flex:1;min-width:160px;display:flex;flex-direction:column;gap:4px}
+.code{font-family:var(--font-display);font-size:42px;font-weight:700;letter-spacing:.14em;line-height:1}
+#link{font-family:var(--font-mono);font-size:13px;color:var(--muted)}
+.btn[disabled]{opacity:.6;cursor:default}
+
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="mark" aria-hidden="true"></span>Dernier fil</div>
+    <span id="net" class="net">Connexion…</span>
+  </header>
+
+  <main id="head" aria-live="polite">
+    <section class="panel">
+      <div class="eyebrow">Table de jeu</div>
+      <h2>Chargement…</h2>
+    </section>
+  </main>
+
+  <section id="shareBox" class="panel" hidden>
+    <div class="eyebrow">Inviter les joueurs</div>
+    <div class="share">
+      <div id="qr" class="qr" aria-label="QR code du lien de la partie"></div>
+      <div class="share-txt">
+        <span class="lbl">Code de la table</span>
+        <span id="code" class="code"></span>
+        <p class="muted">Scanne le QR code ou ouvre le lien. Aucun compte n'est nécessaire.</p>
+      </div>
+    </div>
+    <input id="link" type="text" readonly aria-label="Lien de la partie">
+    <div class="row">
+      <button id="shareBtn" class="btn grow">Partager le lien</button>
+      <button id="copyBtn" class="btn grow">Copier le lien</button>
+    </div>
+  </section>
+
+  <section id="joinBox" class="panel" hidden>
+    <h2>Prendre une place</h2>
+    <label for="name" class="muted">Ton prénom, tel que les autres le verront</label>
+    <input id="name" type="text" maxlength="16" autocomplete="nickname" placeholder="Léa">
+    <p id="nameErr" class="err" hidden>Entre un prénom pour rejoindre.</p>
+    <button id="joinBtn" class="btn primary">Rejoindre la partie</button>
+  </section>
+
+  <section id="createBox" class="panel" hidden>
+    <div class="eyebrow" id="createEyebrow">Nouvelle table</div>
+    <h2>Combien de joueurs autour de la table ?</h2>
+    <div class="stepper">
+      <button id="minus" aria-label="Un joueur de moins">−</button>
+      <span class="num" id="sizeNum">4</span>
+      <button id="plus" aria-label="Un joueur de plus">+</button>
+    </div>
+    <p class="muted" id="compText"></p>
+    <div class="row">
+      <button id="createBtn" class="btn primary grow">Créer la table</button>
+      <button id="createCancel" class="btn ghost" hidden>Annuler</button>
+    </div>
+  </section>
+
+  <section id="codeBox" class="panel" hidden>
+    <h2>Rejoindre une table</h2>
+    <label for="codeIn" class="muted">Code donné par l'hôte</label>
+    <input id="codeIn" type="text" maxlength="8" autocapitalize="characters" autocomplete="off" placeholder="K7PX">
+    <p id="codeErr" class="err" hidden>Entre le code à 4 caractères de la table.</p>
+    <button id="codeBtn" class="btn">Rejoindre</button>
+  </section>
+
+  <section id="board" style="display:flex;flex-direction:column;gap:14px"></section>
+
+  <details class="rules">
+    <summary>Règles</summary>
+    <ul>
+      <li>Chacun reçoit en secret un rôle : Démineur ou Saboteur. Personne ne sait qui est dans quel camp, pas même ses alliés.</li>
+      <li>Le paquet contient autant de fils de désamorçage que de joueurs, une seule bombe, et des fils neutres pour compléter (5 fils par joueur au total).</li>
+      <li>Manche 1 : 5 fils chacun, puis 4, 3 et 2. Tu connais le contenu de ta main mais pas l'ordre de tes fils.</li>
+      <li>À chaque manche, annoncez à voix haute combien de fils de désamorçage vous avez et si vous avez la bombe. Mentir est permis.</li>
+      <li>Le joueur qui tient la pince coupe un fil chez un autre joueur (jamais chez lui). La pince passe au joueur dont le fil vient d'être coupé.</li>
+      <li>Une manche compte autant de coupes que de joueurs. Ensuite, les fils restants sont mélangés et redistribués avec un fil de moins chacun.</li>
+      <li>Les Démineurs gagnent dès que tous les fils de désamorçage sont coupés. Les Saboteurs gagnent si la bombe est coupée, ou si la 4e manche se termine avant.</li>
+    </ul>
+  </details>
+</div>
+<div id="toast" class="toast" hidden></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ====== À REMPLIR : l'adresse de ta base Firebase (page Realtime Database) ====== */
+const FIREBASE_CONFIG = {
+  databaseURL: "COLLE_ICI_L_ADRESSE_DE_TA_BASE"
+};
+/* ================================================================================ */
+
+const ROLE_TABLE={3:[2,1,0],4:[3,2,1],5:[3,2,0],6:[4,2,0],7:[5,3,1],8:[5,3,0],9:[6,4,1],10:[6,4,0]};
+const WIRE={d:'Désamorçage',n:'Neutre',b:'Bombe'};
+const TEAM={b:'Démineur',r:'Saboteur'};
+const CODE_CHARS='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const $=id=>document.getElementById(id);
+
+let fdb=null,roomId=null,roomRef=null,onlineRef=null,connRef=null,meOnline=null;
+let S=null,loaded=false,fatal=null,connected=false;
+let online=new Set();
+const ui={showRole:false,showHand:false,sel:null,busy:false,createOpen:false,size:4,seenRound:0,seenCut:0,roleTimer:null,handTimer:null,askRestart:false,qrFor:null};
+
+function rid(n,chars){const a=chars||'abcdefghijkmnpqrstuvwxyz23456789';const r=crypto.getRandomValues(new Uint32Array(n));let s='';for(const x of r)s+=a[x%a.length];return s}
+function rand(n){return crypto.getRandomValues(new Uint32Array(1))[0]%n}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=rand(i+1);[a[i],a[j]]=[a[j],a[i]]}return a}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function cleanName(x){return String(x||'').replace(/\s+/g,' ').trim().slice(0,16)}
+function clampSize(n){n=Math.round(+n||4);return Math.min(10,Math.max(3,n))}
+function plural(n,s,p){return n+' '+(n>1?p:s)}
+function nameOf(id){const p=S&&S.players.find(p=>p.pid===id);return p?p.name:'?'}
+function toast(msg){const t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200)}
+function compText(n){const [b,r,drop]=ROLE_TABLE[n];return `Rôles : ${plural(b,'Démineur','Démineurs')} et ${plural(r,'Saboteur','Saboteurs')}${drop?', dont un rôle écarté au hasard':''}. Fils : ${n} de désamorçage, 1 bombe, ${4*n-1} neutres.`}
+
+let pid=lsGet('df_pid');if(!pid){pid='p'+rid(11);lsSet('df_pid',pid)}
+let myName=cleanName(lsGet('df_name')||'');
+
+/* ---------- règles du jeu ---------- */
+function arr(x){return Array.isArray(x)?x.filter(v=>v!=null):(x&&typeof x==='object'?Object.values(x):[])}
+function norm(s){
+  s.players=arr(s.players);s.table=arr(s.table);s.log=arr(s.log);
+  s.roles=s.roles||{};s.hands=s.hands||{};
+  for(const p of s.players)s.hands[p.pid]=arr(s.hands[p.pid]);
+  return s;
+}
+function freshLobby(size,host,players){
+  return {v:1,gid:rid(8),phase:'lobby',size,hostPid:host,players:players||[],roles:{},hands:{},table:[],log:[],
+    round:0,cutsLeft:0,holder:'',found:0,need:0,winner:'',reason:'',last:null,comp:null,cutN:0,ts:Date.now()};
+}
+function deal(s,cards){shuffle(cards);const per=6-s.round;s.hands={};s.players.forEach((p,i)=>{s.hands[p.pid]=cards.slice(i*per,(i+1)*per)})}
+function startGame(s){
+  const N=s.players.length;const [nb,nr,drop]=ROLE_TABLE[N];
+  const pool=shuffle([...Array(nb).fill('b'),...Array(nr).fill('r')]);
+  s.roles={};s.players.forEach((p,i)=>{s.roles[p.pid]=pool[i]});
+  s.comp={b:nb,r:nr,drop};
+  const deck=[];for(let i=0;i<N;i++)deck.push('d');deck.push('b');while(deck.length<5*N)deck.push('n');
+  Object.assign(s,{size:N,phase:'play',round:1,need:N,found:0,table:[],cutsLeft:N,winner:'',reason:'',last:null,cutN:0});
+  deal(s,deck.map(t=>({id:rid(7),t})));
+  s.holder=s.players[rand(N)].pid;
+  s.log=[{k:'start'}];
+}
+function endGame(s,w,why){s.phase='end';s.winner=w;s.reason=why;s.log.push({k:'end'})}
+function doCut(s,by,at,cid){
+  const h=s.hands[at];const i=h.findIndex(c=>c.id===cid);if(i<0)return false;
+  const c=h.splice(i,1)[0];
+  s.cutN=(s.cutN||0)+1;
+  s.table.push({t:c.t,at,by,r:s.round});
+  s.last={by,at,t:c.t,n:s.cutN};
+  s.log.push({k:'cut',by,at,t:c.t});
+  s.holder=at;s.cutsLeft--;
+  if(c.t==='b')endGame(s,'r','bomb');
+  else if(c.t==='d'&&++s.found>=s.need)endGame(s,'b','defused');
+  else if(s.cutsLeft<=0){
+    if(s.round>=4)endGame(s,'r','time');
+    else{const rest=[];for(const p of s.players)rest.push(...s.hands[p.pid]);s.round++;s.cutsLeft=s.players.length;deal(s,rest);s.log.push({k:'round',r:s.round})}
+  }
+  if(s.log.length>40)s.log=s.log.slice(-40);
+  return true;
+}
+function applyAct(s,a,act){
+  const host=a===s.hostPid,lobby=s.phase==='lobby',seated=s.players.some(p=>p.pid===a);
+  switch(act.type){
+    case 'join':{const name=cleanName(act.name);if(!name||!lobby)return false;
+      const p=s.players.find(p=>p.pid===a);
+      if(p){if(p.name===name)return false;p.name=name;return true}
+      if(s.players.length>=s.size)return false;
+      s.players.push({pid:a,name});
+      if(s.players.length>=s.size)startGame(s);
+      return true}
+    case 'leave':if(!lobby||!seated)return false;s.players=s.players.filter(p=>p.pid!==a);return true;
+    case 'kick':{if(!host||!lobby)return false;const n=s.players.length;s.players=s.players.filter(p=>p.pid!==act.pid);return s.players.length!==n}
+    case 'start':if(!host||!lobby||s.players.length<3)return false;startGame(s);return true;
+    case 'restart':if(!host||lobby||s.players.length<3)return false;s.gid=rid(8);startGame(s);return true;
+    case 'lobby':{if(!host)return false;const size=clampSize(act.size);Object.assign(s,freshLobby(size,s.hostPid,s.players.slice(0,size)));return true}
+    case 'cut':if(s.phase!=='play'||s.holder!==a||act.at===a||!s.hands[act.at])return false;return doCut(s,a,act.at,act.card);
+  }
+  return false;
+}
+
+/* ---------- synchronisation ---------- */
+function send(type,extra){
+  if(!roomRef||ui.busy)return;
+  const act=Object.assign({type},extra||{});
+  ui.busy=true;render();
+  roomRef.transaction(cur=>{
+    if(cur===null)return cur;
+    const s=norm(cur);
+    if(!applyAct(s,pid,act))return;
+    s.ts=Date.now();return s;
+  },(err)=>{
+    ui.busy=false;
+    if(err)toast(connected?"L'action n'est pas passée. Réessaie.":"Pas de connexion. Vérifie ton réseau.");
+    render();
+  },false);
+}
+function createRoom(){
+  if(!fdb)return;
+  const code=rid(4,CODE_CHARS);
+  const s=freshLobby(ui.size,pid,[]);
+  if(myName)s.players.push({pid,name:myName});
+  $('createBtn').disabled=true;
+  fdb.ref('rooms/'+code).transaction(cur=>cur===null?s:undefined,(err,ok)=>{
+    $('createBtn').disabled=false;
+    if(err){toast("La table n'a pas pu être créée. Vérifie la connexion.");return}
+    if(!ok){createRoom();return}
+    ui.createOpen=false;location.hash=code;
+  },false);
+}
+function openRoom(code){
+  if(roomRef){roomRef.off();roomRef=null}
+  if(onlineRef){onlineRef.off();onlineRef=null}
+  if(meOnline){meOnline.onDisconnect().cancel();meOnline.remove();meOnline=null}
+  S=null;loaded=false;online=new Set();ui.qrFor=null;
+  roomId=code;
+  if(!roomId||!fdb){loaded=true;render();return}
+  roomRef=fdb.ref('rooms/'+roomId);
+  const timer=setTimeout(()=>{if(!loaded){toast('La table met du temps à répondre…')}},10000);
+  roomRef.on('value',snap=>{clearTimeout(timer);loaded=true;onState(snap.val())},()=>{loaded=true;fatal="Accès à la base refusé. Vérifie les règles de sécurité Firebase.";render()});
+  onlineRef=fdb.ref('online/'+roomId);
+  onlineRef.on('value',snap=>{online=new Set(Object.keys(snap.val()||{}));render()},()=>{});
+  meOnline=fdb.ref('online/'+roomId+'/'+pid);
+  if(connected){meOnline.onDisconnect().remove();meOnline.set(true)}
+}
+function readHash(){const h=decodeURIComponent(location.hash.slice(1)).toUpperCase().replace(/[^A-Z0-9]/g,'');return /^[A-Z0-9]{4,8}$/.test(h)?h:null}
+
+/* ---------- affichage ---------- */
+function wireChip(t){return `<span class="wire ${t}" role="img" aria-label="${WIRE[t]}"></span>`}
+function handCounts(h){const c={d:0,n:0,b:0};for(const x of h||[])c[x.t]++;return c}
+function link(){return location.origin+location.pathname+'#'+roomId}
+function render(){
+  $('net').textContent=fatal?'Hors ligne':connected?(roomId?'Table '+roomId:'En ligne'):'Connexion…';
+  $('net').className='net'+(connected&&!fatal?' on':'');
+  const head=$('head'),board=$('board');
+  const seated=!!(S&&S.players.some(p=>p.pid===pid));
+  const isHost=!!(S&&S.hostPid===pid);
+
+  const showCreate=!fatal&&fdb&&(!roomId||ui.createOpen);
+  $('createBox').hidden=!showCreate;
+  if(showCreate){
+    $('sizeNum').textContent=ui.size;$('compText').textContent=compText(ui.size);
+    $('createBtn').textContent=roomId&&isHost?`Ouvrir la salle à ${ui.size} joueurs`:roomId?'Créer une nouvelle table':'Créer la table';
+    $('createCancel').hidden=!roomId;
+    $('createEyebrow').textContent=roomId?'Changer de partie':'Nouvelle table';
+  }
+  $('codeBox').hidden=!!(fatal||!fdb||roomId);
+  $('joinBox').hidden=!(S&&S.phase==='lobby'&&!seated&&S.players.length<S.size);
+  if(!$('joinBox').hidden&&!$('name').value)$('name').value=myName;
+  const showShare=!!(S&&S.phase==='lobby'&&roomId);
+  $('shareBox').hidden=!showShare;
+  if(showShare)drawShare();
+
+  if(fatal){head.innerHTML=`<section class="panel"><div class="eyebrow">Table indisponible</div><h2>${esc(fatal)}</h2></section>`;board.innerHTML='';return}
+  if(!roomId){
+    head.innerHTML=`<section class="panel"><div class="eyebrow">Bienvenue</div><h1>Une bombe, des fils, et un traître parmi vous</h1><p class="muted">Crée une table puis fais scanner le QR code à tes amis. Chacun joue sur son téléphone, sans compte.</p></section>`;
+    board.innerHTML='';return;
+  }
+  if(!loaded){head.innerHTML=`<section class="panel"><div class="eyebrow">Table ${esc(roomId)}</div><h2>Connexion à la table…</h2></section>`;board.innerHTML='';return}
+  if(!S){
+    head.innerHTML=`<section class="panel"><div class="eyebrow">Table ${esc(roomId)}</div><h2>Cette table n'existe pas</h2><p class="muted">Vérifie le code ou le lien, ou crée une nouvelle table.</p><button class="btn" data-act="home">Retour à l'accueil</button></section>`;
+    board.innerHTML='';return;
+  }
+
+  if(S.phase==='lobby'){
+    const seats=[];
+    for(let i=0;i<S.size;i++){
+      const p=S.players[i];
+      if(!p){seats.push(`<li><span class="seat-n">${i+1}</span><span class="seat-name seat-free">Place libre</span></li>`);continue}
+      seats.push(`<li><span class="seat-n">${i+1}</span><span class="dot ${online.has(p.pid)?'on':''}" aria-hidden="true"></span><span class="seat-name">${esc(p.name)}</span>${p.pid===pid?'<span class="tag">toi</span>':''}${p.pid===S.hostPid?'<span class="tag host">hôte</span>':''}${isHost&&p.pid!==pid?`<button class="btn small ghost" data-act="kick" data-pid="${esc(p.pid)}">Retirer</button>`:''}</li>`);
+    }
+    const n=S.players.length;
+    head.innerHTML=`<section class="panel">
+      <div class="eyebrow">Salle d'attente · table ${esc(roomId)}</div>
+      <h1>${n} / ${S.size} joueurs</h1>
+      <p class="muted">${compText(S.size)}</p>
+      <ol class="seats">${seats.join('')}</ol>
+      ${seated?`<div class="row"><span class="grow muted">Tu joues sous le nom <b>${esc(nameOf(pid))}</b>.</span><button class="btn small" data-act="leave">Quitter</button></div>`:''}
+      ${!seated&&n>=S.size?`<p class="muted">La salle est complète. Tu peux suivre la partie d'ici.</p>`:''}
+      <p class="muted">La partie démarre toute seule quand les ${S.size} places sont prises.</p>
+    </section>`;
+    board.innerHTML=isHost?`<div class="row">${n>=3&&n<S.size?`<button class="btn primary grow" data-act="start">Lancer à ${n} joueurs</button>`:''}<button class="btn grow" data-act="newgame">Changer le nombre de joueurs</button></div>`:'';
+    return;
+  }
+
+  const me=S.players.find(p=>p.pid===pid);
+  const myRole=me?S.roles[pid]:null;
+  const comp=S.comp||{b:0,r:0,drop:0};
+
+  if(S.phase==='end'){
+    const why={bomb:`${esc(nameOf(S.last&&S.last.by))} a coupé la bombe chez ${esc(nameOf(S.last&&S.last.at))}.`,defused:`Les ${S.need} fils de désamorçage ont été coupés.`,time:`La 4e manche est terminée et il restait des fils de désamorçage.`}[S.reason]||'';
+    const you=myRole?(myRole===S.winner?'Ton camp gagne.':'Ton camp a perdu.'):'';
+    head.innerHTML=`<section class="result ${S.winner}">
+      <div class="eyebrow">Fin de partie</div>
+      <h1>${S.winner==='b'?'Les Démineurs gagnent':'Les Saboteurs gagnent'}</h1>
+      <p>${why} ${you}</p>
+    </section>
+    <section class="panel"><h2>Qui était qui</h2><ul class="roles">${S.players.map(p=>`<li><span>${esc(p.name)}${p.pid===pid?' (toi)':''}</span><span class="team ${S.roles[p.pid]}">${TEAM[S.roles[p.pid]]}</span></li>`).join('')}</ul>
+    ${comp.drop?`<p class="muted">Le rôle écarté au début était un ${comp.b>S.players.filter(p=>S.roles[p.pid]==='b').length?'Démineur':'Saboteur'}.</p>`:''}</section>
+    ${isHost?`<div class="row"><button class="btn primary grow" data-act="restart">Rejouer avec les mêmes joueurs</button><button class="btn grow" data-act="newgame">Changer le nombre de joueurs</button></div>`:`<p class="muted">L'hôte peut relancer une partie.</p>`}`;
+    board.innerHTML=tableHtml();
+    return;
+  }
+
+  const myTurn=S.holder===pid;
+  const turn=myTurn
+    ?`<div class="turn mine"><span class="lbl">Tu as la pince</span><strong>${ui.busy?'Coupe en cours…':ui.sel?'Touche encore ce fil pour le couper':'Choisis un fil chez un autre joueur'}</strong></div>`
+    :`<div class="turn"><span class="lbl">Au tour de</span><strong>${esc(nameOf(S.holder))} tient la pince</strong></div>`;
+  const last=S.last?`<div class="last">${wireChip(S.last.t)}<span>Dernière coupe : <b>${esc(nameOf(S.last.by))}</b> chez <b>${esc(nameOf(S.last.at))}</b>, fil ${WIRE[S.last.t].toLowerCase()}.</span></div>`:'';
+  const pips=[1,2,3,4].map(r=>`<i class="${r<S.round?'past':r===S.round?'now':''}"></i>`).join('');
+  const meter=Array.from({length:S.need},(_,i)=>`<i class="${i<S.found?'ok':''}"></i>`).join('');
+  let mine='';
+  if(me){
+    const h=S.hands[pid];const c=handCounts(h);
+    const goal=myRole==='b'?'Fais couper tous les fils de désamorçage.':'Fais couper la bombe ou tiens jusqu\'à la fin.';
+    mine=`<section class="me">
+      <button class="secret ${ui.showRole?'open '+myRole:''}" data-act="role" aria-pressed="${ui.showRole}">${ui.showRole?`<span class="team ${myRole}">${TEAM[myRole]}</span><small>${goal}</small>`:`<b>Mon rôle</b><small>Touche pour voir. Cache ton écran.</small>`}</button>
+      <button class="secret ${ui.showHand?'open':''}" data-act="hand" aria-pressed="${ui.showHand}">${ui.showHand?`<span class="lbl">Ma main · ${plural(h.length,'fil','fils')}</span><span class="mini">${c.d?`<span><i class="sw d"></i>${c.d} désamorçage</span>`:''}${c.n?`<span><i class="sw n"></i>${plural(c.n,'neutre','neutres')}</span>`:''}${c.b?`<span><i class="sw b"></i><b>la bombe</b></span>`:''}${!h.length?'<span>Plus de fils</span>':''}</span>`:`<b>Ma main</b><small>Touche pour voir ce que tu as.</small>`}</button>
+    </section>`;
+  }
+  head.innerHTML=`<section class="hud">
+      <div class="hud-item"><span class="lbl">Manche</span><div class="hud-line"><span class="val">${S.round}/4</span></div><div class="pips">${pips}</div></div>
+      <div class="hud-item"><span class="lbl">Coupes restantes</span><div class="hud-line"><span class="val">${S.cutsLeft}</span><span class="muted">sur ${S.players.length}</span></div></div>
+      <div class="hud-item wide"><div class="hud-line"><span class="lbl">Fils de désamorçage coupés</span><span class="val">${S.found}/${S.need}</span></div><div class="meter">${meter}</div></div>
+    </section>
+    ${turn}${last}${mine}`;
+
+  const rows=S.players.map(p=>{
+    const h=S.hands[p.pid]||[];const isMe=p.pid===pid;const can=myTurn&&!isMe&&!ui.busy;
+    const cards=h.map((c,i)=>`<button class="card ${can?'can':''} ${ui.sel===c.id?'sel':''}" ${can?'':'disabled'} data-at="${esc(p.pid)}" data-card="${esc(c.id)}" aria-label="Fil ${i+1} de ${esc(p.name)}"></button>`).join('');
+    return `<li class="pl ${S.holder===p.pid?'holder':''} ${isMe?'me':''}"><div class="pl-top"><span class="dot ${online.has(p.pid)?'on':''}" aria-hidden="true"></span><span class="nm">${esc(p.name)}</span>${isMe?'<span class="tag">toi</span>':''}${S.holder===p.pid?'<span class="pince">Pince</span>':''}<span class="cnt">${plural(h.length,'fil','fils')}</span></div><div class="cards">${cards}</div></li>`;
+  }).join('');
+  board.innerHTML=`<ul class="players">${rows}</ul>${tableHtml()}
+    ${isHost?(ui.askRestart?`<p class="notice">La partie en cours sera perdue et de nouveaux rôles seront tirés.</p><div class="row"><button class="btn primary grow" data-act="restart">Confirmer</button><button class="btn ghost" data-act="norestart">Annuler</button></div>`:`<div class="row"><button class="btn ghost grow" data-act="askrestart">Recommencer la partie</button></div>`):''}`;
+}
+function tableHtml(){
+  if(!S.table.length)return `<section class="panel"><h2>Fils coupés</h2><p class="muted">Aucun fil coupé pour l'instant.</p></section>`;
+  let html='';
+  for(let r=1;r<=4;r++){
+    const items=S.table.filter(x=>x.r===r);if(!items.length)continue;
+    html+=`<div class="cut-row"><span class="lbl">Manche ${r}</span><div class="cut-list">${items.map(x=>`<span class="cut-item">${wireChip(x.t)}${esc(nameOf(x.at))}</span>`).join('')}</div></div>`;
+  }
+  const log=S.log.slice(-6).reverse().map(e=>{
+    if(e.k==='cut')return `<li><span><b>${esc(nameOf(e.by))}</b> coupe chez <b>${esc(nameOf(e.at))}</b> : ${WIRE[e.t].toLowerCase()}</span></li>`;
+    if(e.k==='round')return `<li><span>Manche ${e.r} : fils redistribués, ${6-e.r} chacun</span></li>`;
+    if(e.k==='start')return `<li><span>Rôles et fils distribués</span></li>`;
+    if(e.k==='end')return `<li><span>Fin de partie</span></li>`;
+    return '';
+  }).join('');
+  return `<section class="panel"><h2>Fils coupés</h2>${html}</section><section class="panel"><h2>Journal</h2><ul class="log">${log}</ul></section>`;
+}
+function drawShare(){
+  if(ui.qrFor===roomId)return;
+  ui.qrFor=roomId;
+  $('code').textContent=roomId;$('link').value=link();
+  const box=$('qr');box.innerHTML='';
+  if(window.QRCode){try{new QRCode(box,{text:link(),width:168,height:168,colorDark:'#15191e',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M})}catch(e){box.hidden=true}}
+  else box.hidden=true;
+  $('shareBtn').hidden=!navigator.share;
+}
+
+/* ---------- événements ---------- */
+document.addEventListener('click',e=>{
+  const card=e.target.closest('.card[data-card]');
+  if(card&&!card.disabled){
+    const cid=card.dataset.card,at=card.dataset.at;
+    if(ui.sel===cid){ui.sel=null;send('cut',{at,card:cid})}else ui.sel=cid;
+    render();return;
+  }
+  const b=e.target.closest('[data-act]');if(!b)return;
+  switch(b.dataset.act){
+    case 'role':ui.showRole=!ui.showRole;clearTimeout(ui.roleTimer);if(ui.showRole)ui.roleTimer=setTimeout(()=>{ui.showRole=false;render()},5000);break;
+    case 'hand':ui.showHand=!ui.showHand;clearTimeout(ui.handTimer);if(ui.showHand)ui.handTimer=setTimeout(()=>{ui.showHand=false;render()},8000);break;
+    case 'leave':send('leave');break;
+    case 'kick':send('kick',{pid:b.dataset.pid});break;
+    case 'start':send('start');break;
+    case 'restart':ui.askRestart=false;send('restart');break;
+    case 'askrestart':ui.askRestart=true;break;
+    case 'norestart':ui.askRestart=false;break;
+    case 'newgame':ui.createOpen=true;ui.size=S?clampSize(S.size):4;break;
+    case 'home':location.hash='';break;
+  }
+  render();
+});
+$('minus').onclick=()=>{ui.size=clampSize(ui.size-1);render()};
+$('plus').onclick=()=>{ui.size=clampSize(ui.size+1);render()};
+$('createBtn').onclick=()=>{if(roomId&&S&&S.hostPid===pid){ui.createOpen=false;send('lobby',{size:ui.size})}else createRoom()};
+$('createCancel').onclick=()=>{ui.createOpen=false;render()};
+$('name').addEventListener('input',()=>{$('nameErr').hidden=true});
+$('name').addEventListener('keydown',e=>{if(e.key==='Enter')$('joinBtn').click()});
+$('joinBtn').onclick=()=>{
+  const n=cleanName($('name').value);
+  if(!n){$('nameErr').hidden=false;return}
+  myName=n;lsSet('df_name',n);send('join',{name:n});
+};
+$('codeIn').addEventListener('input',()=>{$('codeErr').hidden=true});
+$('codeIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('codeBtn').click()});
+$('codeBtn').onclick=()=>{const c=$('codeIn').value.toUpperCase().replace(/[^A-Z0-9]/g,'');if(c.length<4){$('codeErr').hidden=false;return}location.hash=c};
+$('copyBtn').onclick=async()=>{try{await navigator.clipboard.writeText(link());toast('Lien copié')}catch(e){$('link').select();toast('Sélectionne le lien pour le copier')}};
+$('shareBtn').onclick=()=>{navigator.share({title:'Dernier fil',text:'Rejoins la table '+roomId,url:link()}).catch(()=>{})};
+window.addEventListener('hashchange',()=>{const c=readHash();if(c!==roomId)openRoom(c)});
+
+let wl=null;
+async function wake(){try{if(!wl&&navigator.wakeLock&&document.visibilityState==='visible'&&S&&S.phase==='play'){wl=await navigator.wakeLock.request('screen');wl.addEventListener('release',()=>{wl=null})}}catch(e){}}
+document.addEventListener('pointerup',wake);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')wake()});
+
+function onState(d){
+  const prev=S;S=d?norm(d):null;
+  if(S){
+    if(!prev||prev.gid!==S.gid){ui.sel=null;ui.showRole=false;ui.showHand=false;ui.askRestart=false}
+    if(S.phase==='play'&&ui.seenRound&&S.round!==ui.seenRound){ui.showHand=false;toast(`Manche ${S.round} : les fils ont été redistribués.`)}
+    if(S.last&&S.last.n!==ui.seenCut&&prev&&prev.gid===S.gid){
+      ui.sel=null;
+      if(S.last.t==='b'){document.body.classList.remove('flash');void document.body.offsetWidth;document.body.classList.add('flash');try{navigator.vibrate&&navigator.vibrate([200,80,200])}catch(e){}}
+    }
+    ui.seenRound=S.round;ui.seenCut=S.last?S.last.n:0;
+    wake();
+  }
+  render();
+}
+
+/* ---------- démarrage ---------- */
+(function boot(){
+  if(!window.firebase||!/^https:\/\/.+/.test(FIREBASE_CONFIG.databaseURL||'')){
+    fatal="Le site n'est pas encore relié à sa base de données. Colle l'adresse de ta base Firebase en haut du script.";
+    loaded=true;render();return;
+  }
+  try{firebase.initializeApp(FIREBASE_CONFIG);fdb=firebase.database()}
+  catch(e){fatal="L'adresse de la base Firebase est invalide.";render();return}
+  connRef=fdb.ref('.info/connected');
+  connRef.on('value',snap=>{
+    connected=!!snap.val();
+    if(connected&&meOnline){meOnline.onDisconnect().remove();meOnline.set(true)}
+    render();
+  });
+  openRoom(readHash());
+})();
+
+</script>
+</body>
+</html>
