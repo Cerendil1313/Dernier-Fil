@@ -1106,5 +1106,27 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
   openRoom(readHash());
 })();
 </script>
+  <button id="fsBtn" aria-label="Plein écran">⛶</button>
+<style>
+#fsBtn{position:fixed;top:10px;right:10px;z-index:9999;
+  font-size:22px;padding:6px 10px;border:none;border-radius:8px;
+  background:rgba(0,0,0,.5);color:#fff}
+</style>
+<script>
+const fsBtn = document.getElementById('fsBtn');
+const root = document.documentElement;
+const req = root.requestFullscreen || root.webkitRequestFullscreen;
+// Bouton caché si le navigateur ne gère pas le plein écran (iPhone) ou si le jeu est lancé depuis l'écran d'accueil
+if (!req || matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches) {
+  fsBtn.style.display = 'none';
+}
+fsBtn.onclick = () => {
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+  } else {
+    req.call(root);
+  }
+};
+</script>
 </body>
 </html>
